@@ -7,6 +7,9 @@ format:
       - top=30mm
       - left=20mm
       - heightrounded
+execute: 
+  echo: false
+  warning: false
 ---
 
 
@@ -49,6 +52,7 @@ armed_conflict/
 The R code chunk below includes the R packages required to knit this document. This is often called a **setup** code. We want the code to run, but we don't want the final document to show the code or results. Edit the code chunk so that the code will run but the code and results (including all warnings and messages) are hidden from the final PDF output.
 
 ```{r}
+
 library(tidyverse)
 library(knitr)
 library(kableExtra)
@@ -73,21 +77,20 @@ The **final goal** is to display a **bar chart** that depicts how many countries
 **First**, edit the code chunk below that reads in `countries.txt` to also display the number of rows and columns of the data. 
 
 ```{r}
-#| echo: TRUE
+
 countries <- read.table("/Users/shanjiejiao/Desktop/CHL5233.nosync/Week 2/Data/Raw_Data/countries.txt", header = TRUE)
-summary(countries)
+#summary(countries)
 nrow(countries)
 count(unique(countries))
 ```
 *There is 186 Countries in the dataset*
 
-
-
 **Second**, read in `regions.txt` and also write a sentence that states how many countries are included in the data set.
 
 ```{r}
+
 regions <- read.table("/Users/shanjiejiao/Desktop/CHL5233.nosync/Week 2/Data/Raw_Data/regions.txt", header = TRUE)
-summary(regions)
+#summary(regions)
 nrow(regions)
 count(unique(regions))
 
@@ -99,8 +102,9 @@ count(unique(regions))
 **Third**, subset the `regions` data set to only include countries from the `countries` data set.
 
 ```{r}
+
 regions_subset <- regions[regions$country_code %in% countries$ISO, ]
-head(regions_subset)
+#head(regions_subset)
 
 write.csv(regions_subset,"/Users/shanjiejiao/Desktop/CHL5233.nosync/Week 2/Data/Processed_Data/regions_subset.csv",row.names = FALSE)
 ```
@@ -111,6 +115,8 @@ write.csv(regions_subset,"/Users/shanjiejiao/Desktop/CHL5233.nosync/Week 2/Data/
 
 Next, we want to find out how many countries are in a region. Use the `group_by()` and `summarise()` functions in the `dplyr` package to count the number of countries in each region. Then use the `kable()` function in the `knitr` package to create a simple table with the column headers, "Region" and "Count". 
 ```{r}
+#| label: tbl-region-ca
+#| tbl-cap: Region Table
 region_counts <- regions_subset %>%
   group_by(region) %>%
   summarise(Count = n())
@@ -124,6 +130,8 @@ kable(region_counts,
 
 Create a similar table that shows the number of countries in each **sub-region**.
 ```{r}
+#| label: tbl-subregion-ca
+#| tbl-cap: Subregion Table
 subregion_counts <- regions_subset %>%
   group_by(sub_region) %>%
   summarise(Count = n())

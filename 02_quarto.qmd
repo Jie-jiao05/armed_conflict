@@ -1,0 +1,107 @@
+---
+title: "Week 2 - Quarto for R"
+author: "CHL5233 Fall 2026"
+format: 
+  revealjs:
+    slide-number: true
+    show-slide-number: all
+embed-resources: true
+---
+
+## Quarto
+
+-   Quarto is a publishing platform for technical and scientific documents
+
+-   You can create documents (HTML, PDF, Word) where text and code coexist
+
+-   Outputs include reports, presentations, websites, books, and more
+
+-   You can include code written in R, Python, Julia, or Observable
+
+-   These slides were created in Quarto
+
+## R or qmd? {.smaller}
+
+**R file should still be used for**
+
+-   **Developing** and **testing** code
+-   Creating functions and scripts to call using `source()`
+-   Writing code for **packages**
+-   Working with long data **cleaning** or **pre-processing**
+    
+**Quarto should be used for**
+
+-   When the eventual goal is to **render** the document
+-   Creating **reproducible** documents in HTML, PDF, Word
+-   Presenting code and analysis results with **explanation**
+-   Generating presentation **slides** in HTML, Beamer, PPT
+    
+
+## Text in Quarto
+
+-   Quarto uses a [Markdown](https://quarto.org/docs/authoring/markdown-basics.html) format
+
+-   Mathematical syntax and equations can be included in a similar manner to LaTex
+
+$$
+Y = \alpha + \beta X
+$$
+
+## Code chunks in Quarto
+
+```{r}
+#| echo: true ### by default, codes are hidden in presentations so above is required to show the code
+
+data(cars)
+head(cars)
+plot(cars$speed ~ cars$dist)
+```
+
+## Preparing to render PDF
+
+-   Positron includes Quarto, so no separate Quarto installation is needed.
+
+-   To create PDFs, install a LaTeX distribution. TinyTeX (based on TeX Live) is recommended.
+
+-   In Positron, open the **Terminal** (**Terminal** > **New Terminal**) and run:
+
+```{bash}
+#| eval: false
+quarto install tinytex
+```
+
+-   Once it is installed, save your `.qmd` file and select **Render** in the editor. Choose **PDF** if prompted.
+
+-   See Quarto's [Positron authoring guide](https://quarto.org/docs/get-started/authoring/positron.html) for more information.
+
+## Quick exercise
+
+-   Reproduce these slides by rendering `02_quarto.qmd`
+
+-   Complete the [markdown tutorial](https://commonmark.org/help/tutorial/)
+
+-   Useful documentations
+
+    -   [Quarto](https://quarto.org/)
+
+    -   [Authoring with Positron](https://quarto.org/docs/get-started/authoring/positron.html)
+
+    -   [Chapter 29 in R for Data Science](https://r4ds.hadley.nz/quarto.html)
+
+    -   [Chapter 3.2 in Telling Stories with Data](https://tellingstorieswithdata.com/03-workflow.html#quarto)
+
+-   Best way to learn Quarto is to actually use it!
+
+## In-class assignment
+
+-   Available in this week's module
+
+-   Work in groups
+
+## Next week
+
+-   Preparing data for analysis - functions and loops
+
+-   Experiment with AI-assisted coding
+
+-   We will create an analytical data set from multiple open source data sets

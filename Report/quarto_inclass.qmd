@@ -83,7 +83,7 @@ countries <- read.table("/Users/shanjiejiao/Desktop/CHL5233.nosync/Week 2/Data/R
 nrow(countries)
 count(unique(countries))
 ```
-*There is 186 Countries in the dataset*
+*There are 186 Countries in the dataset*
 
 **Second**, read in `regions.txt` and also write a sentence that states how many countries are included in the data set.
 
@@ -95,7 +95,7 @@ nrow(regions)
 count(unique(regions))
 
 ```
-*There is 249 Countries in the dataset*
+*There are 249 Countries in the dataset*
 
 
 
@@ -151,6 +151,8 @@ Here, we will use `geom_bar()` function within `ggplot()` to create a bar chart 
 3. Order the bars such that the sub-region with the most number countries appear at the top and the sub-region with the least number of countries appear at the bottom. 
 
 ```{r}
+#| label: tbl-His-ca
+#| tbl-cap: Histogram Graph
 library(ggplot2)
 
 ggplot(regions_subset, aes(x = reorder(sub_region, sub_region, FUN = length),

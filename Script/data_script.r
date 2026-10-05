@@ -89,3 +89,7 @@ final_data <- list(matmor,infmor,neomor,un5mor,disas,confl) |>
 write.csv(final_data,"/Users/shanjiejiao/Desktop/CHL5233.nosync/Week 2/Data/Processed_Data/final_data.csv")
 
 
+### ANY FINDNING for CODEX?
+# Well not too much, but in the methodology, codex tend to use different code that Professor's provided, but the result is the same.
+
+

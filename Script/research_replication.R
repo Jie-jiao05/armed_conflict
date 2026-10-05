@@ -134,7 +134,7 @@ stopifnot(
 )
 
 # 5. Save when you run this script. Use a new folder and filename.
-output_dir <- here("Data", "processed")
+output_dir <- here("Data", "Processed_Data")
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 write.csv(final_data_alt,
           file.path(output_dir, "final_data_replication.csv"),

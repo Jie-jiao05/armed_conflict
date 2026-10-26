@@ -45,9 +45,9 @@ disas <- disas0 |>
     .groups = "drop"
   )
 
-# Retain the original threshold: at least 25 total deaths per country-year.
+# Reference definition: at least 25 total deaths within a country-year.
+# This is the accepted country-year definition for this assignment.
 # Use prior-year exposure: conflict in 1999 maps to mortality in 2000.
-# Shifting the calendar year avoids lagging across gaps in observations.
 confl <- confl0 |>
   group_by(iso, year) |>
   summarise(deaths = sum(best, na.rm = TRUE), .groups = "drop") |>
@@ -101,3 +101,4 @@ output_dir <- here("Data", "Processed_Data")
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 write.csv(final_data, file.path(output_dir, "final_data.csv"),
           row.names = FALSE)
+message("Saved final_data.csv from the seven raw datasets.")

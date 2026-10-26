@@ -1,6 +1,5 @@
-# Alternative preparation of the six datasets in the assignment.
-# Run after your import lines have created these raw data frames:
-# matmor0, infmor0, neomor0, un5mor0, disas0, confl0.
+# Alternative preparation of all seven datasets in the assignment.
+# Run this script directly; it imports all required raw data.
 # This script does not source or edit data_script.r.
 
 library(dplyr)
@@ -9,9 +8,14 @@ library(purrr)
 library(janitor)
 library(here)
 
-required_objects <- c("matmor0", "infmor0", "neomor0", "un5mor0",
-                      "disas0", "confl0")
-stopifnot(all(vapply(required_objects, exists, logical(1), inherits = TRUE)))
+raw_dir <- here("Data", "Raw_Data", "week3_raw")
+matmor0 <- read.csv(file.path(raw_dir, "maternal_mortality.csv"))
+infmor0 <- read.csv(file.path(raw_dir, "infant_mortality.csv"))
+neomor0 <- read.csv(file.path(raw_dir, "neonatal_mortality.csv"))
+un5mor0 <- read.csv(file.path(raw_dir, "under5_mortality.csv"))
+disas0 <- read.csv(file.path(raw_dir, "disaster.csv"))
+confl0 <- read.csv(file.path(raw_dir, "conflict.csv"))
+covariates <- read.csv(file.path(raw_dir, "covariates.csv"))
 
 # 1. World Bank mortality: one reusable function for all four outcomes.
 # pivot_longer() belongs to tidyr. Keep missing mortality values as NA.
@@ -29,10 +33,10 @@ prepare_mortality <- function(data, outcome_name) {
 }
 
 mortality_tables <- list(
-  matmor = matmor0,
-  infmor = infmor0,
-  neomor = neomor0,
-  un5mor = un5mor0
+  maternal_mortality = matmor0,
+  infant_mortality = infmor0,
+  neonatal_mortality = neomor0,
+  under5_mortality = un5mor0
 ) |>
   imap(prepare_mortality)
 
@@ -110,30 +114,41 @@ conflict_alt <- conflict_by_id |>
   summarise(conflict = as.integer(any(qualifies)), .groups = "drop") |>
   # Shift the calendar year rather than lagging rows in a possibly sparse
   # table: conflict in 1999 predicts mortality in 2000; 2018 predicts 2019.
-  transmute(iso, year = as.integer(year) + 1L, conflict_lag = conflict)
+  transmute(iso, year = as.integer(year) + 1L, armed_conflict = conflict)
 
 # 4. Merge: retain the country-years in the supplied mortality datasets.
 # These inputs contain 186 countries; this preparation does not apply the
 # additional sample restrictions or fit the regression models in the paper.
 check_country_year(disaster_alt)
 check_country_year(conflict_alt)
+check_country_year(covariates)
+
+final_columns <- c(
+  "iso", "year", "armed_conflict", "maternal_mortality",
+  "infant_mortality", "under5_mortality", "neonatal_mortality",
+  "drought", "earthquake", "gdp_1000", "oecd", "pop_dens",
+  "urban", "age_dep", "male_edu", "temp", "rainfall_1000"
+)
 
 final_data_alt <- mortality_alt |>
   left_join(disaster_alt, by = c("iso", "year")) |>
   left_join(conflict_alt, by = c("iso", "year")) |>
+  left_join(covariates, by = c("iso", "year")) |>
+  select(all_of(final_columns)) |>
   arrange(iso, year)
 
 check_country_year(final_data_alt)
 stopifnot(
+  identical(names(final_data_alt), final_columns),
   nrow(final_data_alt) == nrow(country_years),
   all(final_data_alt$year %in% 2000:2019),
   all(final_data_alt$earthquake %in% 0:1),
   all(final_data_alt$drought %in% 0:1),
-  all(is.na(final_data_alt$conflict_lag) |
-        final_data_alt$conflict_lag %in% 0:1)
+  all(is.na(final_data_alt$armed_conflict) |
+        final_data_alt$armed_conflict %in% 0:1)
 )
 
-# 5. Save when you run this script. Use a new folder and filename.
+# 5. Save the replication dataset separately from final_data.csv.
 output_dir <- here("Data", "Processed_Data")
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 write.csv(final_data_alt,

@@ -1,95 +1,103 @@
-install.packages("here")
-install.packages("countrycode")
-library(tidyverse)
 library(dplyr)
+library(tidyr)
+library(purrr)
 library(here)
-library(countrycode)
-# Prepare World Bank data
+library(janitor)
 
-# Read in maternal mortality data
-matmor0 <- read.csv(here("Data", "Raw_Data", "week3_raw", "maternal_mortality.csv"), header = TRUE)
-#other dataset
-infmor0 <- read.csv(here("Data", "Raw_Data", "week3_raw","infant_mortality.csv"), header = TRUE)
-neomor0 <- read.csv(here("Data", "Raw_Data", "week3_raw", "neonatal_mortality.csv"), header = TRUE)
-un5mor0 <- read.csv(here("Data", "Raw_Data", "week3_raw","under5_mortality.csv"), header = TRUE)
+# Read all seven datasets.
+raw_dir <- here("Data", "Raw_Data", "week3_raw")
+matmor0 <- read.csv(file.path(raw_dir, "maternal_mortality.csv"))
+infmor0 <- read.csv(file.path(raw_dir, "infant_mortality.csv"))
+neomor0 <- read.csv(file.path(raw_dir, "neonatal_mortality.csv"))
+un5mor0 <- read.csv(file.path(raw_dir, "under5_mortality.csv"))
+disas0 <- read.csv(file.path(raw_dir, "disaster.csv"))
+confl0 <- read.csv(file.path(raw_dir, "conflict.csv"))
+covariates <- read.csv(file.path(raw_dir, "covariates.csv"))
 
-# Change wide to long format
-matmor_long <- matmor0 |>
-  pivot_longer(cols = starts_with("X"),
-                 names_to = "year",
-                 names_prefix = "X", # removes X from year column
-                 values_to = "maternal_mortality") |> 
-  mutate(year = as.numeric(year)) |> # change year to numeric
-  select(iso, year, maternal_mortality)
-
-# the above work for one case just maternal one
-
-#try to replicate it to all and make a funciton
-wbfun <- function(dataname, varname){
+# Convert each mortality dataset to one row per country and year.
+wbfun <- function(dataname, varname) {
   dataname |>
-    dplyr::select(iso, X2000:X2019) |>
-    pivot_longer(cols = starts_with("X"),
-                 names_to = "year",
-                 names_prefix = "X",
-                 values_to = varname) |>
-    mutate(year = as.numeric(year)) |>
+    select(iso, all_of(paste0("X", 2000:2019))) |>
+    pivot_longer(
+      cols = -iso,
+      names_to = "year",
+      names_prefix = "X",
+      values_to = varname
+    ) |>
+    mutate(year = as.integer(year)) |>
     arrange(iso, year)
 }
 
-matmor <- wbfun(dataname = matmor0, varname = "matmor")
-infmor <- wbfun(dataname = infmor0, varname = "infmor")
-neomor <- wbfun(dataname = neomor0, varname = "neomor")
-un5mor <- wbfun(dataname = un5mor0, varname = "un5mor")
+matmor <- wbfun(matmor0, "maternal_mortality")
+infmor <- wbfun(infmor0, "infant_mortality")
+un5mor <- wbfun(un5mor0, "under5_mortality")
+neomor <- wbfun(neomor0, "neonatal_mortality")
 
-
-#Prepare disaster data
-install.packages("janitor")
-library(janitor)
-disas0 <- read.csv(here("Data", "Raw_Data", "week3_raw","disaster.csv"), header = TRUE)
-
+# Collapse multiple disasters to binary country-year indicators.
 disas <- disas0 |>
-  janitor::clean_names() |>
-
-  dplyr::filter(
-    year >= 2000 & year <= 2019,disaster_type %in% c("Earthquake", "Drought")
-  ) |>
-  
-  dplyr::select(year,iso,disaster_type
-  ) |>
-  
-  dplyr::mutate(drought = ifelse(disaster_type == "Drought", 1, 0),earthquake = ifelse(disaster_type == "Earthquake", 1, 0)
-  ) |>
-    dplyr::select(year,iso,earthquake,drought)
-    
-# #Prepare conflict data
-confl0 <- read.csv(here("Data", "Raw_Data", "week3_raw","conflict.csv"), header = TRUE)
-
-confl <- confl0 |>
-  dplyr::group_by(iso, year) |>
-  dplyr::summarise(deaths = sum(best, na.rm = TRUE),.groups = "drop") |>
-  
-  dplyr::mutate(
-    conflict = ifelse(deaths >= 25, 1, 0)
-) |>
-
-  dplyr::group_by(iso) |>
-  dplyr::arrange(year, .by_group = TRUE) |>
-  dplyr::mutate(
-    conflict_lag = dplyr::lag(conflict, 1)
-  ) |>
-  dplyr::ungroup()
-
-# Merge
-final_data <- list(matmor,infmor,neomor,un5mor,disas,confl) |>
-  reduce(
-    full_join,
-    by = c("iso", "year")
+  clean_names() |>
+  filter(between(year, 2000L, 2019L),
+         disaster_type %in% c("Earthquake", "Drought")) |>
+  group_by(iso, year) |>
+  summarise(
+    drought = as.integer(any(disaster_type == "Drought")),
+    earthquake = as.integer(any(disaster_type == "Earthquake")),
+    .groups = "drop"
   )
 
-write.csv(final_data,"/Users/shanjiejiao/Desktop/CHL5233.nosync/Week 2/Data/Processed_Data/final_data.csv")
+# Retain the original threshold: at least 25 total deaths per country-year.
+# Use prior-year exposure: conflict in 1999 maps to mortality in 2000.
+# Shifting the calendar year avoids lagging across gaps in observations.
+confl <- confl0 |>
+  group_by(iso, year) |>
+  summarise(deaths = sum(best, na.rm = TRUE), .groups = "drop") |>
+  transmute(
+    iso,
+    year = as.integer(year) + 1L,
+    armed_conflict = as.integer(deaths >= 25)
+  ) |>
+  filter(between(year, 2000L, 2019L))
 
+# Check keys before joining so repeated events cannot multiply rows.
+check_keys <- function(data) {
+  stopifnot(
+    !anyNA(data$iso), !anyNA(data$year),
+    anyDuplicated(data[c("iso", "year")]) == 0L
+  )
+}
+walk(list(matmor, infmor, un5mor, neomor, disas, confl, covariates),
+     check_keys)
 
-### ANY FINDNING for CODEX?
-# Well not too much, but in the methodology, codex tend to use different code that Professor's provided, but the result is the same.
+final_columns <- c(
+  "iso", "year", "armed_conflict", "maternal_mortality",
+  "infant_mortality", "under5_mortality", "neonatal_mortality",
+  "drought", "earthquake", "gdp_1000", "oecd", "pop_dens",
+  "urban", "age_dep", "male_edu", "temp", "rainfall_1000"
+)
 
+# Keep the 2000-2019 mortality panel and join every source by iso and year.
+# No listed drought/earthquake means 0; missing outcome/covariate values
+# remain NA.
+final_data <- list(matmor, infmor, un5mor, neomor) |>
+  reduce(full_join, by = c("iso", "year")) |>
+  left_join(confl, by = c("iso", "year")) |>
+  left_join(disas, by = c("iso", "year")) |>
+  left_join(covariates, by = c("iso", "year")) |>
+  mutate(
+    drought = replace_na(drought, 0L),
+    earthquake = replace_na(earthquake, 0L)
+  ) |>
+  select(all_of(final_columns)) |>
+  arrange(iso, year)
 
+check_keys(final_data)
+stopifnot(
+  identical(names(final_data), final_columns),
+  nrow(final_data) == nrow(matmor),
+  all(final_data$year %in% 2000:2019)
+)
+
+output_dir <- here("Data", "Processed_Data")
+dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+write.csv(final_data, file.path(output_dir, "final_data.csv"),
+          row.names = FALSE)
